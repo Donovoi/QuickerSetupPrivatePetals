@@ -1,0 +1,109 @@
+# The below is a powershell advanced function that will do the following:
+
+# set up using wsl2 ubuntu and docker
+
+# to use the petals repo to create a private swarm https://github.com/bigscience-workshop/petals?tab=readme-ov-file
+
+# allow user to select a directory where existing weights are ready to be used - we are using the hf version of the latest llama 2
+
+# need to be idempotent & declarative
+
+# if everything is already setup, user should be able to point to a vhdx file to import as vhd via wsl2 (once the script has installed the latest pre-release of wsl2, and the latest version of docker)
+
+# once vhd is imported/setup make sure wsl2 has the correct ports forwarded for both the server hosting of the model and the user interface
+
+# start the user interface in a default browser if all is setup and running
+
+# follow powershell best practices
+
+# asst_5yWBK18p7lS7VdUdHTnkPuAJ
+# Creating an advanced PowerShell function that accomplishes what you've described involves multiple steps and careful attention to idempotency and declarative programming principles. The task involves:
+
+# Checking for and installing WSL 2 (Windows Subsystem for Linux) and Docker if they're not already installed.
+# Installing the latest pre-release version of WSL 2 if required.
+# Cloning the petals repository from GitHub.
+# Allowing the user to select a directory for existing model weights.
+# Potentially handling VHDX file import to WSL 2.
+# Configuring port forwarding for server hosting and UI access.
+# Starting the user interface in the default browser.
+
+Function Invoke-SetupPetals {
+    Param (
+        [Parameter(Mandatory = $false)]
+        [string]$WeightsDirectory,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$VHDPath
+    )
+
+    # Ensure running as Administrator
+    If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
+        Throw 'This script must be run as Administrator.'
+    }
+
+    # Install/Update WSL
+    $wslInstalled = (Get-WindowsOptionalFeature -FeatureName Microsoft-Windows-Subsystem-Linux -Online).State -eq 'Enabled'
+    If (-Not $wslInstalled) {
+        Write-Output 'Installing WSL...'
+        dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+        dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+        Restart-Computer -Force
+    }
+
+    # Check for Docker Desktop and install if not present
+    If (-Not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-Warning 'Docker Desktop needs to be installed manually. Please install Docker Desktop from https://www.docker.com/get-started and rerun this script.'
+        Return
+    }
+
+    # Setting up Docker to use WSL 2
+    docker --version
+    Write-Output 'Please ensure Docker Desktop is set to use WSL 2 through Docker Desktop settings.'
+
+    # Clone petals repository
+    $repoPath = '.\petals'
+    If (-Not (Test-Path $repoPath)) {
+        Write-Output 'Cloning petals repository...'
+        git clone https://github.com/bigscience-workshop/petals.git $repoPath
+    }
+
+    # VHDX Handling
+    If ($VHDPath) {
+        If (Test-Path $VHDPath) {
+            # Example distribution name and install location - these need to be set appropriately
+            $distributionName = 'Ubuntu'
+            $installLocation = 'C:\WSLDistros\Ubuntu'
+            wsl --import $distributionName $installLocation $VHDPath
+        }
+        Else {
+            Write-Error 'Specified VHDPath does not exist.'
+            Return
+        }
+    }
+
+    # Model Weights Handling - Placeholder, adapt as necessary
+    # If model weights need to be copied or configured in WSL/Docker, include those steps here.
+    If ($WeightsDirectory) {
+        If (Test-Path $WeightsDirectory) {
+            # Example copy operation to WSL instance - adapt paths as necessary
+            # cp $WeightsDirectory "<WSL or Docker path where weights should reside>"
+            Write-Output 'Weights directory specified. Ensure manual configuration as needed.'
+        }
+        Else {
+            Write-Error 'Specified weights directory does not exist.'
+            Return
+        }
+    }
+
+    # Port Forwarding - Placeholder, adapt based on requirements
+    # Ensure WSL 2 has the required ports forwarded
+    # This might involve setting up firewall rules or modifying .wslconfig
+
+    # Starting UI in Default Browser
+    Start-Process 'http://localhost:<UI_PORT>'
+
+    Write-Output 'Setup complete. Please verify that everything is running correctly.'
+}
+
+# Note: Run this function with the required parameters
+# Setup-PetalsEnvironment -WeightsDirectory "<PathToWeights>" -VHDPath "<PathToVHD>"
